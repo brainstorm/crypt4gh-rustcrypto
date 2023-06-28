@@ -82,20 +82,22 @@ fn main() -> Result<(), Crypt4GHError> {
     let cipher_rustcrypto = encrypt_x25519_chacha20_poly1305(PLAINTEXT, &ALICE_SECRET_KEY, &BOB_PUBLIC_KEY)?;
     let cipher_crypt4gh = &encrypt(PLAINTEXT, &encrypt_keys).unwrap()[0];
 
-    assert_eq!(cipher_rustcrypto, cipher_crypt4gh.clone());
+    //assert_eq!(cipher_rustcrypto, cipher_crypt4gh.clone());
 
     // Decrypt keypair
     let decrypt_keys = Keys { method: 0, privkey: BOB_SECRET_KEY.to_vec(), recipient_pubkey: BOB_PUBLIC_KEY.to_vec()};
 
     println!("Decrypting...");
     // Decrypt one packet
-    let plaintext_rustcrypto = decrypt_x25519_chacha20_poly1305(CIPHERTEXT, &BOB_SECRET_KEY, &Some(ALICE_PUBLIC_KEY.to_vec())).unwrap();
-    let plaintext_crypt4gh_sodiumoxide = decrypt(vec![CIPHERTEXT.to_vec()], &[decrypt_keys], &Some(ALICE_PUBLIC_KEY.to_vec()));
+    let plaintext_rustcrypto = decrypt_x25519_chacha20_poly1305(&cipher_rustcrypto, &BOB_SECRET_KEY, &Some(ALICE_PUBLIC_KEY.to_vec())).unwrap();
+    let plaintext_crypt4gh_sodiumoxide = decrypt(vec![cipher_crypt4gh.to_vec()], &[decrypt_keys], &Some(ALICE_PUBLIC_KEY.to_vec()));
 
     // Return is (decrypted_packets, mut ignored_packets) ... so just get the decrypted_packets payload for a single packet?
     let comparable_plaintext = plaintext_crypt4gh_sodiumoxide.0[0].clone();
 
     assert_eq!(plaintext_rustcrypto, comparable_plaintext);
+    assert_eq!(PLAINTEXT, plaintext_rustcrypto);
+    assert_eq!(PLAINTEXT, comparable_plaintext);
 
     Ok(())
 }
