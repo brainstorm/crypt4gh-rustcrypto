@@ -73,7 +73,7 @@ fn decrypt_x25519_chacha20_poly1305_crypt4gh_rust_original(
 	privkey: &[u8],
 	_sender_pubkey: &Option<Vec<u8>>,
 ) -> Result<Vec<u8>, ()> {
-	//log::debug!("    my secret key: {:02x?}", &privkey[0..32].iter().format(""));
+	log::debug!("    my secret key: {:02x?}", &privkey[0..32].iter());
 
 	let peer_pubkey = &encrypted_part[0..32];
 
@@ -85,13 +85,13 @@ fn decrypt_x25519_chacha20_poly1305_crypt4gh_rust_original(
 		//.ok_or(Crypt4GHError::NoNonce)?;
 	let packet_data = &encrypted_part[44..];
 
-	// log::debug!("    peer pubkey: {:02x?}", peer_pubkey.iter().format(""));
-	// log::debug!("    nonce: {:02x?}", nonce.0.iter().format(""));
-	// log::debug!(
-	// 	"    encrypted data ({}): {:02x?}",
-	// 	packet_data.len(),
-	// 	packet_data.iter().format("")
-	// );
+	log::debug!("    peer pubkey: {:02x?}", peer_pubkey.iter());
+	log::debug!("    nonce: {:02x?}", nonce.0.iter());
+	log::debug!(
+		"    encrypted data ({}): {:02x?}",
+		packet_data.len(),
+		packet_data.iter()
+	);
 
 	// X25519 shared key
 	let pubkey = get_public_key_from_private_key(privkey).unwrap();
@@ -99,7 +99,8 @@ fn decrypt_x25519_chacha20_poly1305_crypt4gh_rust_original(
 	let client_sk = SodiumSecretKey::from_slice(&privkey[0..32]).unwrap();
 	let server_pk = SodiumPublicKey::from_slice(peer_pubkey).unwrap();
 	let (shared_key, _) = x25519blake2b::client_session_keys(&client_pk, &client_sk, &server_pk).unwrap();
-	//log::debug!("shared key: {:02x?}", shared_key.0.iter().format(""));
+
+	log::debug!("shared key: {:02x?}", shared_key.0.iter());
 
 	// Chacha20_Poly1305
 	let key = chacha20poly1305_ietf::Key::from_slice(&shared_key.0).unwrap();
