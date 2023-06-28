@@ -1,0 +1,10 @@
+[package]
+name = "crypt4gh-de-sodiumoxide"
+description = "Remove unsafe(), CVEs and deprecations from crypt4gh-rust"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+crypto_box = { git="https://github.com/RustCrypto/nacl-compat", branch="master", version="0.9.0-rc.0", features = ["chacha20"] }
+hex-literal = "0.4"
+sodiumoxide = { version = "0.2", features = ["benchmarks"] }
