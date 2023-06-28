@@ -1,3 +1,4 @@
+use crypt4gh_de_sodiumoxide::error::Crypt4GHError;
 use crypto_box::{ChaChaBox, SecretKey, PublicKey, aead::Aead};
 use std::error::Error;
 use hex_literal::hex;
@@ -71,15 +72,15 @@ pub fn get_public_key_from_private_key(sk: &[u8]) -> Result<Vec<u8>, Box<dyn Err
 fn decrypt_x25519_chacha20_poly1305_crypt4gh_rust_original(
 	encrypted_part: &[u8],
 	privkey: &[u8],
-	_sender_pubkey: &Option<Vec<u8>>,
-) -> Result<Vec<u8>, ()> {
+	sender_pubkey: &Option<Vec<u8>>,
+) -> Result<Vec<u8>, Crypt4GHError> {
 	log::debug!("    my secret key: {:02x?}", &privkey[0..32].iter());
 
 	let peer_pubkey = &encrypted_part[0..32];
 
-	// if sender_pubkey.is_some() && sender_pubkey.clone().unwrap().as_slice() != peer_pubkey {
-	// 	return Err(Crypt4GHError::InvalidPeerPubPkey);
-	// }
+	if sender_pubkey.is_some() && sender_pubkey.clone().unwrap().as_slice() != peer_pubkey {
+		return Err(Crypt4GHError::InvalidPeerPubPkey);
+	}
 
 	let nonce = sodiumoxide::crypto::aead::chacha20poly1305_ietf::Nonce::from_slice(&encrypted_part[32..44]).unwrap();
 		//.ok_or(Crypt4GHError::NoNonce)?;
@@ -95,21 +96,22 @@ fn decrypt_x25519_chacha20_poly1305_crypt4gh_rust_original(
 
 	// X25519 shared key
 	let pubkey = get_public_key_from_private_key(privkey).unwrap();
-	let client_pk = SodiumPublicKey::from_slice(&pubkey).unwrap();
-	let client_sk = SodiumSecretKey::from_slice(&privkey[0..32]).unwrap();
-	let server_pk = SodiumPublicKey::from_slice(peer_pubkey).unwrap();
-	let (shared_key, _) = x25519blake2b::client_session_keys(&client_pk, &client_sk, &server_pk).unwrap();
+	let client_pk = SodiumPublicKey::from_slice(&pubkey).ok_or(Crypt4GHError::BadClientPublicKey)?;
+	let client_sk = SodiumSecretKey::from_slice(&privkey[0..32]).ok_or(Crypt4GHError::BadClientPrivateKey)?;
+	let server_pk = SodiumPublicKey::from_slice(peer_pubkey).ok_or(Crypt4GHError::BadServerPublicKey)?;
+	let (shared_key, _) = x25519blake2b::client_session_keys(&client_pk, &client_sk, &server_pk).map_err(|_| Crypt4GHError::BadSharedKey)?;
 
 	log::debug!("shared key: {:02x?}", shared_key.0.iter());
 
 	// Chacha20_Poly1305
-	let key = chacha20poly1305_ietf::Key::from_slice(&shared_key.0).unwrap();
+	let key = chacha20poly1305_ietf::Key::from_slice(&shared_key.0).ok_or(Crypt4GHError::BadSharedKey)?;
 
-	chacha20poly1305_ietf::open(packet_data, None, &nonce, &key)
+	chacha20poly1305_ietf::open(packet_data, None, &nonce, &key).map_err(|_| Crypt4GHError::InvalidData)
 }
 
 fn main() {
     let plaintext_rustcrypto = decrypt_x25519_chacha20_poly1305(CIPHERTEXT, &ALICE_SECRET_KEY, &Some(BOB_PUBLIC_KEY.to_vec())).unwrap();
+    dbg!(&plaintext_rustcrypto);
     let plaintext_crypt4gh_sodiumoxide = decrypt_x25519_chacha20_poly1305_crypt4gh_rust_original(CIPHERTEXT, &ALICE_SECRET_KEY, &Some(BOB_PUBLIC_KEY.to_vec())).unwrap();
 
     assert_eq!(plaintext_rustcrypto, plaintext_crypt4gh_sodiumoxide);
