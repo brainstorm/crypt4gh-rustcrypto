@@ -68,7 +68,7 @@ fn decrypt_x25519_chacha20_poly1305_crypt4gh_rust_original(
 	privkey: &[u8],
 	sender_pubkey: &Option<Vec<u8>>,
 ) -> Result<Vec<u8>, Crypt4GHError> {
-	println!("    my secret key: {:02x?}", &privkey[0..32].iter());
+	//println!("    my secret key: {:02x?}", &privkey[0..32].iter());
 
 	let peer_pubkey = &encrypted_part[0..32];
 

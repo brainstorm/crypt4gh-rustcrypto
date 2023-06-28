@@ -20,13 +20,6 @@ const PLAINTEXT: &[u8] = &[
     0x5e, 0x07, 0x05,
     ];
 
-const CIPHERTEXT: &[u8] = &hex!(
-        "0cd5ed093de698c8e410d0d451df2f5283057376b947b9b7392b956e5d675f309218acce8cf85f6c"
-        "f6a9e2e09ef8c5b0f97c661ee21b1b3418be566692634056a92b4034d5d0cf14c52420a488b7f0da"
-        "0c5740dfc6b85397d3a8f679e84303e8d3f8b048abdb2dd79183b0a62683a1bc2a527fc9b82c5ffa"
-        "c4a684bcfeadfdcd28930b2dbe597f4716a658ccfca5b44049e06c"
-    );
-
 const NONCE: &[u8; 24] = &hex!("69696ee955b62b73cd62bda875fc73d68219e0036b7a0b37");
 
 // Alice's keypair
@@ -77,12 +70,12 @@ fn main() -> Result<(), Crypt4GHError> {
     let mut encrypt_keys = HashSet::new();
     encrypt_keys.insert(Keys { method: 0, privkey: ALICE_SECRET_KEY.to_vec(), recipient_pubkey: BOB_PUBLIC_KEY.to_vec()});
 
-    print!("Encrypting...");
+    print!("Encrypting...\n");
     // Encrypt one packet
     let cipher_rustcrypto = encrypt_x25519_chacha20_poly1305(PLAINTEXT, &ALICE_SECRET_KEY, &BOB_PUBLIC_KEY)?;
     let cipher_crypt4gh = &encrypt(PLAINTEXT, &encrypt_keys).unwrap()[0];
 
-    //assert_eq!(cipher_rustcrypto, cipher_crypt4gh.clone());
+    assert_eq!(cipher_rustcrypto, cipher_crypt4gh.clone());
 
     // Decrypt keypair
     let decrypt_keys = Keys { method: 0, privkey: BOB_SECRET_KEY.to_vec(), recipient_pubkey: BOB_PUBLIC_KEY.to_vec()};
