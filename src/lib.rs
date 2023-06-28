@@ -2,13 +2,14 @@ pub mod error;
 pub mod decrypt;
 pub mod encrypt;
 
-use hex_literal::hex;
-
 use std::sync::Once;
 
 /// WARNING!!! Re-using the nonce for comparing/reproducibility, NEVER NEVER NEVER use this or make this (unintentional) mistake
 /// in production code!!!
-pub const NONCE: &[u8; 24] = &hex!("69696ee955b62b73cd62bda875fc73d68219e0036b7a0b37");
+//pub const NONCE: &[u8; 24] = &hex!("69696ee955b62b73cd62bda875fc73d68219e0036b7a0b37");
+//
+// TODO: Shrinking to 12 elements to be compatible with Crypt4GH spec?
+pub const NONCE: &[u8; 12] = &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 pub(crate) static SODIUM_INIT: Once = Once::new();
 
