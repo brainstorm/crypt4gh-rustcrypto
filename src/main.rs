@@ -1,3 +1,4 @@
+use crypt4gh_de_sodiumoxide::Keys;
 use crypt4gh_de_sodiumoxide::error::Crypt4GHError;
 use crypto_box::{ChaChaBox, SecretKey, PublicKey, aead::Aead};
 use std::error::Error;
@@ -58,6 +59,50 @@ fn decrypt_x25519_chacha20_poly1305(
 /// Functions below are extracted (and slightly modified for simplicity) from crypt4gh-rust crate
 /// Goal: Trying to substitute/rewrite this sodiumoxide deprecate function with RustCrypto's cryptobox crate...
 
+/// Returns a tuple (Vec<u8>, Vec<u8>) of, apparently, (decrypted_packets, mut ignored_packets)...
+/// proper return types for this be like ¯\_(ツ)_/¯
+fn decrypt(
+	encrypted_packets: Vec<Vec<u8>>,
+	keys: &[Keys],
+	sender_pubkey: &Option<Vec<u8>>,
+) -> (Vec<Vec<u8>>, Vec<Vec<u8>>) {
+	let mut decrypted_packets = Vec::new();
+	let mut ignored_packets = Vec::new();
+
+	for packet in encrypted_packets {
+		match decrypt_packet(&packet, keys, sender_pubkey) {
+			Ok(decrypted_packet) => decrypted_packets.push(decrypted_packet),
+			Err(e) => {
+				log::warn!("Ignoring packet because: {}", e);
+				ignored_packets.push(packet);
+			},
+		}
+	}
+
+	(decrypted_packets, ignored_packets)
+}
+
+
+fn decrypt_packet(packet: &[u8], keys: &[Keys], sender_pubkey: &Option<Vec<u8>>) -> Result<Vec<u8>, Crypt4GHError> {
+	let packet_encryption_method =
+		bincode::deserialize::<u32>(packet).map_err(|_| Crypt4GHError::ReadPacketEncryptionMethod)?;
+	log::debug!("Header Packet Encryption Method: {}", packet_encryption_method);
+
+	for key in keys {
+		if packet_encryption_method != u32::from(key.method) {
+			continue;
+		}
+
+		match packet_encryption_method {
+			0 => return decrypt_x25519_chacha20_poly1305_crypt4gh_rust_original(&packet[4..], &key.privkey, sender_pubkey),
+			1 => unimplemented!("AES-256-GCM support is not implemented"),
+			n => return Err(Crypt4GHError::BadHeaderEncryptionMethod(n)),
+		}
+	}
+
+	Err(Crypt4GHError::UnableToEncryptPacket)
+}
+
 /// Gets the public key from a private key
 ///
 /// Computes the curve25519 `scalarmult_base` to the first 32 bytes of `sk`.
@@ -74,7 +119,7 @@ fn decrypt_x25519_chacha20_poly1305_crypt4gh_rust_original(
 	privkey: &[u8],
 	sender_pubkey: &Option<Vec<u8>>,
 ) -> Result<Vec<u8>, Crypt4GHError> {
-	log::debug!("    my secret key: {:02x?}", &privkey[0..32].iter());
+	println!("    my secret key: {:02x?}", &privkey[0..32].iter());
 
 	let peer_pubkey = &encrypted_part[0..32];
 
@@ -82,8 +127,7 @@ fn decrypt_x25519_chacha20_poly1305_crypt4gh_rust_original(
 		return Err(Crypt4GHError::InvalidPeerPubPkey);
 	}
 
-	let nonce = sodiumoxide::crypto::aead::chacha20poly1305_ietf::Nonce::from_slice(&encrypted_part[32..44]).unwrap();
-		//.ok_or(Crypt4GHError::NoNonce)?;
+	let nonce = sodiumoxide::crypto::aead::chacha20poly1305_ietf::Nonce::from_slice(&encrypted_part[32..44]).ok_or(Crypt4GHError::NoNonce)?;
 	let packet_data = &encrypted_part[44..];
 
 	log::debug!("    peer pubkey: {:02x?}", peer_pubkey.iter());
@@ -111,8 +155,10 @@ fn decrypt_x25519_chacha20_poly1305_crypt4gh_rust_original(
 
 fn main() {
     let plaintext_rustcrypto = decrypt_x25519_chacha20_poly1305(CIPHERTEXT, &ALICE_SECRET_KEY, &Some(BOB_PUBLIC_KEY.to_vec())).unwrap();
-    dbg!(&plaintext_rustcrypto);
-    let plaintext_crypt4gh_sodiumoxide = decrypt_x25519_chacha20_poly1305_crypt4gh_rust_original(CIPHERTEXT, &ALICE_SECRET_KEY, &Some(BOB_PUBLIC_KEY.to_vec())).unwrap();
+    let keys = Keys { method: 0, privkey: ALICE_SECRET_KEY.to_vec(), recipient_pubkey: BOB_PUBLIC_KEY.to_vec()};
+    let plaintext_crypt4gh_sodiumoxide = decrypt(vec![CIPHERTEXT.to_vec()], &[keys], &Some(BOB_PUBLIC_KEY.to_vec()));
 
-    assert_eq!(plaintext_rustcrypto, plaintext_crypt4gh_sodiumoxide);
+    let comparable_plaintext = plaintext_crypt4gh_sodiumoxide.0[0].clone();
+
+    assert_eq!(plaintext_rustcrypto, comparable_plaintext);
 }
