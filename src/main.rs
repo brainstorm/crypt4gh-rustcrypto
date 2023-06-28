@@ -20,8 +20,6 @@ const PLAINTEXT: &[u8] = &[
     0x5e, 0x07, 0x05,
     ];
 
-const NONCE: &[u8; 24] = &hex!("69696ee955b62b73cd62bda875fc73d68219e0036b7a0b37");
-
 // Alice's keypair
 const ALICE_SECRET_KEY: [u8; 32] =
     hex!("68f208412d8dd5db9d0c6d18512e86f0ec75665ab841372d57b042b27ef89d4c");
@@ -46,7 +44,7 @@ fn decrypt_x25519_chacha20_poly1305(
     let public_key = PublicKey::from_slice(sender_pubkey_bytes.as_slice()).unwrap();
 
     let plaintext = ChaChaBox::new(&public_key, &secret_key)
-        .decrypt(NONCE.into(), encrypted_part).map_err(|_| Crypt4GHError::UnableToEncryptPacket);
+        .decrypt(crypt4gh_de_sodiumoxide::NONCE.into(), encrypted_part).map_err(|_| Crypt4GHError::UnableToEncryptPacket);
 
     plaintext
 }
@@ -60,7 +58,7 @@ fn encrypt_x25519_chacha20_poly1305(
     let public_key = PublicKey::from_slice(recipient_pubkey).unwrap();
 
     let ciphertext = ChaChaBox::new(&public_key, &secret_key)
-        .encrypt(NONCE.into(), data).map_err(|_| Crypt4GHError::UnableToEncryptPacket);
+        .encrypt(crypt4gh_de_sodiumoxide::NONCE.into(), data).map_err(|_| Crypt4GHError::UnableToEncryptPacket);
 
     ciphertext
 }

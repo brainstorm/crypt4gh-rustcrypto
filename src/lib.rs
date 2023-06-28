@@ -2,7 +2,13 @@ pub mod error;
 pub mod decrypt;
 pub mod encrypt;
 
+use hex_literal::hex;
+
 use std::sync::Once;
+
+/// WARNING!!! Re-using the nonce for comparing/reproducibility, NEVER NEVER NEVER use this or make this (unintentional) mistake
+/// in production code!!!
+pub const NONCE: &[u8; 24] = &hex!("69696ee955b62b73cd62bda875fc73d68219e0036b7a0b37");
 
 pub(crate) static SODIUM_INIT: Once = Once::new();
 

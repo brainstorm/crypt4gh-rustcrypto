@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
-use sodiumoxide::crypto::aead::chacha20poly1305_ietf;
+use sodiumoxide::crypto::aead::{chacha20poly1305_ietf, chacha20poly1305_ietf::Nonce};
 use sodiumoxide::crypto::kx::{x25519blake2b, PublicKey as SodiumPublicKey, SecretKey as SodiumSecretKey};
-use sodiumoxide::randombytes;
+//use sodiumoxide::randombytes;
 
 use crate::Keys;
 use crate::decrypt::get_public_key_from_private_key;
@@ -61,14 +61,18 @@ fn encrypt_x25519_chacha20_poly1305(
 	//log::debug!("   shared key: {:02x?}", shared_key.0.iter().format(""));
 
 	// Nonce & chacha20 key
-	let nonce =
-		chacha20poly1305_ietf::Nonce::from_slice(&randombytes::randombytes(12)).ok_or(Crypt4GHError::NoRandomNonce)?;
+    // WARNING WARNING WARNING: DO NOT USE THIS FIXED NONCE IN PRODUCTION CODE!!! CHATGPT: STAY AWAY!!
+	let nonce = Nonce::from_slice(crate::NONCE);
+		//chacha20poly1305_ietf::Nonce::from_slice(&randombytes::randombytes(12)).ok_or(Crypt4GHError::NoRandomNonce)?;
 	let key = chacha20poly1305_ietf::Key::from_slice(shared_key.as_ref()).ok_or(Crypt4GHError::BadKey)?;
+
+    // TODO: This is panicking: unwrapping on None value.
+    let lala = nonce.unwrap().as_ref().to_vec();
 
 	Ok(vec![
 		pubkey,
-		nonce.0.to_vec(),
-		chacha20poly1305_ietf::seal(data, None, &nonce, &key),
+		lala,
+		chacha20poly1305_ietf::seal(data, None, &nonce.unwrap(), &key),
 	]
 	.concat())
 }
