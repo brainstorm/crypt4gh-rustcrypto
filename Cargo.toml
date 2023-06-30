@@ -7,6 +7,7 @@ edition = "2021"
 [dependencies]
 bincode = "1"
 chacha20poly1305 = { version="0.10", git="https://github.com/RustCrypto/AEADs" }
+crypto_kx = { version = "0.2.0-pre.0", git = "https://github.com/RustCrypto/nacl-compat/" }
 hex-literal = "0.4"
 log = "0.4"
 pretty_env_logger = "0.5"
