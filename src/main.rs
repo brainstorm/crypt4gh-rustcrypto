@@ -1,4 +1,4 @@
-use crypto_box::aead::consts::U24;
+use crypto_box::aead::consts::{U24, U12};
 use crypto_box::aead::generic_array::GenericArray;
 use crypto_box::{ChaChaBox, SecretKey, PublicKey, aead::Aead};
 use std::collections::HashSet;
@@ -44,7 +44,7 @@ fn decrypt_x25519_chacha20_poly1305(
 
     let secret_key = SecretKey::from_slice(privkey).unwrap();
     let public_key = PublicKey::from_slice(sender_pubkey_bytes.as_slice()).unwrap();
-    let nonce = GenericArray::<u8,U24>::clone_from_slice(crypt4gh_de_sodiumoxide::NONCE);
+    let nonce = GenericArray::<u8,U12>::clone_from_slice(crypt4gh_de_sodiumoxide::NONCE);
 
     let plaintext = ChaChaBox::new(&public_key, &secret_key)
         .decrypt(&nonce, encrypted_part).map_err(|_| Crypt4GHError::UnableToEncryptPacket);
@@ -59,7 +59,7 @@ fn encrypt_x25519_chacha20_poly1305(
 ) -> Result<Vec<u8>, Crypt4GHError> {
     let secret_key = SecretKey::from_slice(seckey).unwrap();
     let public_key = PublicKey::from_slice(recipient_pubkey).unwrap();
-    let nonce = GenericArray::<u8,U24>::clone_from_slice(crypt4gh_de_sodiumoxide::NONCE);
+    let nonce = GenericArray::<u8,U12>::clone_from_slice(crypt4gh_de_sodiumoxide::NONCE);
 
     let ciphertext = ChaChaBox::new(&public_key, &secret_key)
         .encrypt(&nonce, data).map_err(|_| Crypt4GHError::UnableToEncryptPacket);
