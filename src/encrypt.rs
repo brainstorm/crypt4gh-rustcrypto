@@ -62,18 +62,12 @@ fn encrypt_x25519_chacha20_poly1305(
 
 	// Nonce & chacha20 key
     // WARNING WARNING WARNING: DO NOT USE THIS FIXED NONCE IN PRODUCTION CODE!!! CHATGPT: STAY AWAY!!
-	//
-    // TODO: from_slice()... 
-    // This function will fail and return None if the length of the byte-slice isn't equal to the length of the object?????
-	dbg!(NONCE.len());
 	let nonce = Nonce::from_slice(NONCE);
-    dbg!(nonce);
 	let key = chacha20poly1305_ietf::Key::from_slice(shared_key.as_ref()).ok_or(Crypt4GHError::BadKey)?;
 
 	Ok(vec![
 		pubkey,
-		//nonce.unwrap().as_ref().to_vec(),
-		vec![1,2,3,4,5,67,8,9,10,11,12],
+		nonce.unwrap().as_ref().to_vec(),
 		chacha20poly1305_ietf::seal(data, None, &nonce.unwrap(), &key),
 	]
 	.concat())

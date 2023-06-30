@@ -1,11 +1,12 @@
-use crypto_box::aead::consts::{U24, U12};
-use crypto_box::aead::generic_array::GenericArray;
-use crypto_box::{ChaChaBox, SecretKey, PublicKey, aead::Aead};
+use chacha20poly1305::aead::Aead;
+use chacha20poly1305::aead::generic_array::GenericArray;
+use chacha20poly1305::{self, ChaCha20Poly1305, KeyInit, consts::U12, consts::U32};
+
 use std::collections::HashSet;
 use hex_literal::hex;
 
 use crypt4gh_de_sodiumoxide::error::Crypt4GHError;
-use crypt4gh_de_sodiumoxide::Keys;
+use crypt4gh_de_sodiumoxide::{Keys, NONCE};
 
 use crypt4gh_de_sodiumoxide::decrypt::decrypt;
 use crypt4gh_de_sodiumoxide::encrypt::encrypt;
@@ -38,33 +39,31 @@ const BOB_PUBLIC_KEY: [u8; 32] =
 fn decrypt_x25519_chacha20_poly1305(
     encrypted_part: &[u8],
     privkey: &[u8],
-    sender_pubkey: &Option<Vec<u8>>,
+    _sender_pubkey: &Option<Vec<u8>>,
 ) -> Result<Vec<u8>, Crypt4GHError> {
-    let sender_pubkey_bytes = sender_pubkey.as_ref().unwrap();
+    let secret_key = GenericArray::<u8, U32>::from_slice(privkey);
+    let cipher = ChaCha20Poly1305::new(secret_key);
+    let nonce = GenericArray::<u8, U12>::from_slice(NONCE);
 
-    let secret_key = SecretKey::from_slice(privkey).unwrap();
-    let public_key = PublicKey::from_slice(sender_pubkey_bytes.as_slice()).unwrap();
-    let nonce = GenericArray::<u8,U12>::clone_from_slice(crypt4gh_de_sodiumoxide::NONCE);
+    let plaintext = cipher.decrypt(nonce, encrypted_part)
+        .map_err(|_| Crypt4GHError::UnableToDecryptBlock)?;
 
-    let plaintext = ChaChaBox::new(&public_key, &secret_key)
-        .decrypt(&nonce, encrypted_part).map_err(|_| Crypt4GHError::UnableToEncryptPacket);
-
-    plaintext
+    Ok(plaintext)
 }
 
 fn encrypt_x25519_chacha20_poly1305(
 	data: &[u8],
 	seckey: &[u8],
-	recipient_pubkey: &[u8],
+	_recipient_pubkey: &[u8],
 ) -> Result<Vec<u8>, Crypt4GHError> {
-    let secret_key = SecretKey::from_slice(seckey).unwrap();
-    let public_key = PublicKey::from_slice(recipient_pubkey).unwrap();
-    let nonce = GenericArray::<u8,U12>::clone_from_slice(crypt4gh_de_sodiumoxide::NONCE);
+    let secret_key = GenericArray::<u8, U32>::from_slice(seckey);
+    let cipher = ChaCha20Poly1305::new(secret_key);
+    let nonce = GenericArray::<u8, U12>::from_slice(NONCE);
 
-    let ciphertext = ChaChaBox::new(&public_key, &secret_key)
-        .encrypt(&nonce, data).map_err(|_| Crypt4GHError::UnableToEncryptPacket);
+    let ciphertext = cipher.encrypt(nonce, data)
+        .map_err(|_| Crypt4GHError::UnableToEncryptPacket)?;
 
-    ciphertext
+    Ok(ciphertext)
 }
 
 fn main() -> Result<(), Crypt4GHError> {
@@ -75,7 +74,7 @@ fn main() -> Result<(), Crypt4GHError> {
     print!("Encrypting...\n");
     // Encrypt one packet
     let cipher_rustcrypto = encrypt_x25519_chacha20_poly1305(PLAINTEXT, &ALICE_SECRET_KEY, &BOB_PUBLIC_KEY)?;
-    let cipher_crypt4gh = &encrypt(PLAINTEXT, &encrypt_keys).unwrap()[0];
+    let cipher_crypt4gh = &encrypt(PLAINTEXT, &encrypt_keys)?[0];
 
     assert_eq!(cipher_rustcrypto, cipher_crypt4gh.clone());
 
@@ -83,6 +82,7 @@ fn main() -> Result<(), Crypt4GHError> {
     let decrypt_keys = Keys { method: 0, privkey: BOB_SECRET_KEY.to_vec(), recipient_pubkey: BOB_PUBLIC_KEY.to_vec()};
 
     println!("Decrypting...");
+
     // Decrypt one packet
     let plaintext_rustcrypto = decrypt_x25519_chacha20_poly1305(&cipher_rustcrypto, &BOB_SECRET_KEY, &Some(ALICE_PUBLIC_KEY.to_vec())).unwrap();
     let plaintext_crypt4gh_sodiumoxide = decrypt(vec![cipher_crypt4gh.to_vec()], &[decrypt_keys], &Some(ALICE_PUBLIC_KEY.to_vec()));
