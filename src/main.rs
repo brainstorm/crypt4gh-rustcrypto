@@ -8,8 +8,8 @@ use hex_literal::hex;
 use crypt4gh_de_sodiumoxide::error::Crypt4GHError;
 use crypt4gh_de_sodiumoxide::{Keys, NONCE};
 
-use crypt4gh_de_sodiumoxide::decrypt::decrypt;
-use crypt4gh_de_sodiumoxide::encrypt::encrypt;
+use crypt4gh_de_sodiumoxide::decrypt::decrypt_with_crypt4gh;
+use crypt4gh_de_sodiumoxide::encrypt::encrypt_with_crypt4gh;
 
 const PLAINTEXT: &[u8] = &[
     0xbe, 0x07, 0x5f, 0xc5, 0x3c, 0x81, 0xf2, 0xd5, 0xcf, 0x14, 0x13, 0x16, 0xeb, 0xeb, 0x0c, 0x7b,
@@ -36,7 +36,7 @@ const BOB_PUBLIC_KEY: [u8; 32] =
     hex!("e8980c86e032f1eb2975052e8d65bddd15c3b59641174ec9678a53789d92c754");
 
 /// Target "new" RustCrypto, safe, decrypt/encrypt functions below
-fn decrypt_x25519_chacha20_poly1305(
+fn decrypt_with_rustcrypto(
     encrypted_part: &[u8],
     privkey: &[u8],
     _sender_pubkey: &Option<Vec<u8>>,
@@ -51,7 +51,7 @@ fn decrypt_x25519_chacha20_poly1305(
     Ok(plaintext)
 }
 
-fn encrypt_x25519_chacha20_poly1305(
+fn encrypt_with_rustcrypto(
 	data: &[u8],
 	seckey: &[u8],
 	_recipient_pubkey: &[u8],
@@ -73,8 +73,8 @@ fn main() -> Result<(), Crypt4GHError> {
 
     print!("Encrypting...\n");
     // Encrypt one packet
-    let cipher_rustcrypto = encrypt_x25519_chacha20_poly1305(PLAINTEXT, &ALICE_SECRET_KEY, &BOB_PUBLIC_KEY)?;
-    let cipher_crypt4gh = &encrypt(PLAINTEXT, &encrypt_keys)?[0];
+    let cipher_rustcrypto = encrypt_with_rustcrypto(PLAINTEXT, &ALICE_SECRET_KEY, &BOB_PUBLIC_KEY)?;
+    let cipher_crypt4gh = &encrypt_with_crypt4gh(PLAINTEXT, &encrypt_keys)?[0];
 
     assert_eq!(cipher_rustcrypto, cipher_crypt4gh.clone());
 
@@ -84,8 +84,8 @@ fn main() -> Result<(), Crypt4GHError> {
     println!("Decrypting...");
 
     // Decrypt one packet
-    let plaintext_rustcrypto = decrypt_x25519_chacha20_poly1305(&cipher_rustcrypto, &BOB_SECRET_KEY, &Some(ALICE_PUBLIC_KEY.to_vec())).unwrap();
-    let plaintext_crypt4gh_sodiumoxide = decrypt(vec![cipher_crypt4gh.to_vec()], &[decrypt_keys], &Some(ALICE_PUBLIC_KEY.to_vec()));
+    let plaintext_rustcrypto = decrypt_with_rustcrypto(&cipher_rustcrypto, &BOB_SECRET_KEY, &Some(ALICE_PUBLIC_KEY.to_vec())).unwrap();
+    let plaintext_crypt4gh_sodiumoxide = decrypt_with_crypt4gh(vec![cipher_crypt4gh.to_vec()], &[decrypt_keys], &Some(ALICE_PUBLIC_KEY.to_vec()));
 
     // Return is (decrypted_packets, mut ignored_packets) ... so just get the decrypted_packets payload for a single packet?
     let comparable_plaintext = plaintext_crypt4gh_sodiumoxide.0[0].clone();

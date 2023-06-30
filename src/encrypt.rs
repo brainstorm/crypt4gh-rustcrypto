@@ -18,7 +18,7 @@ use crate::error::Crypt4GHError;
 ///
 /// * `packet` is a vector of bytes of information to be encrypted
 /// * `keys` is a unique collection of keys with `key.method` == 0
-pub fn encrypt(packet: &[u8], keys: &HashSet<Keys>) -> Result<Vec<Vec<u8>>, Crypt4GHError> {
+pub fn encrypt_with_crypt4gh(packet: &[u8], keys: &HashSet<Keys>) -> Result<Vec<Vec<u8>>, Crypt4GHError> {
 	keys.iter()
 		.filter(|key| key.method == 0)
 		.map(

@@ -10,7 +10,7 @@ use sodiumoxide::crypto::kx::{x25519blake2b, PublicKey as SodiumPublicKey, Secre
 
 /// Returns a tuple (Vec<u8>, Vec<u8>) of, apparently, (decrypted_packets, mut ignored_packets)...
 /// proper names on return types for this be like ¯\_(ツ)_/¯
-pub fn decrypt(
+pub fn decrypt_with_crypt4gh(
 	encrypted_packets: Vec<Vec<u8>>,
 	keys: &[Keys],
 	sender_pubkey: &Option<Vec<u8>>,
