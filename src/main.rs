@@ -1,15 +1,9 @@
-use chacha20poly1305::aead::Aead;
-use chacha20poly1305::aead::generic_array::GenericArray;
-use chacha20poly1305::{self, ChaCha20Poly1305, KeyInit, consts::U12, consts::U32};
-
 use std::collections::HashSet;
+use crypt4gh_de_sodiumoxide::crypt4gh::decrypt_with_crypt4gh;
 use hex_literal::hex;
 
 use crypt4gh_de_sodiumoxide::error::Crypt4GHError;
-use crypt4gh_de_sodiumoxide::{Keys, NONCE};
-
-use crypt4gh_de_sodiumoxide::decrypt::decrypt_with_crypt4gh;
-use crypt4gh_de_sodiumoxide::encrypt::encrypt_with_crypt4gh;
+use crypt4gh_de_sodiumoxide::{Keys, rustcrypto, crypt4gh};
 
 const PLAINTEXT: &[u8] = &[
     0xbe, 0x07, 0x5f, 0xc5, 0x3c, 0x81, 0xf2, 0xd5, 0xcf, 0x14, 0x13, 0x16, 0xeb, 0xeb, 0x0c, 0x7b,
@@ -35,59 +29,30 @@ const BOB_SECRET_KEY: [u8; 32] =
 const BOB_PUBLIC_KEY: [u8; 32] =
     hex!("e8980c86e032f1eb2975052e8d65bddd15c3b59641174ec9678a53789d92c754");
 
-/// Target "new" RustCrypto, safe, decrypt/encrypt functions below
-fn decrypt_with_rustcrypto(
-    encrypted_part: &[u8],
-    privkey: &[u8],
-    _sender_pubkey: &Option<Vec<u8>>,
-) -> Result<Vec<u8>, Crypt4GHError> {
-    let secret_key = GenericArray::<u8, U32>::from_slice(privkey);
-    let cipher = ChaCha20Poly1305::new(secret_key);
-    let nonce = GenericArray::<u8, U12>::from_slice(NONCE);
-
-    let plaintext = cipher.decrypt(nonce, encrypted_part)
-        .map_err(|_| Crypt4GHError::UnableToDecryptBlock)?;
-
-    Ok(plaintext)
-}
-
-fn encrypt_with_rustcrypto(
-	data: &[u8],
-	seckey: &[u8],
-	_recipient_pubkey: &[u8],
-) -> Result<Vec<u8>, Crypt4GHError> {
-    let secret_key = GenericArray::<u8, U32>::from_slice(seckey);
-    let cipher = ChaCha20Poly1305::new(secret_key);
-    let nonce = GenericArray::<u8, U12>::from_slice(NONCE);
-
-    let ciphertext = cipher.encrypt(nonce, data)
-        .map_err(|_| Crypt4GHError::UnableToEncryptPacket)?;
-
-    Ok(ciphertext)
-}
 
 fn main() -> Result<(), Crypt4GHError> {
-    // Encrypt keypair
+    // Define encrypting keypair
     let mut encrypt_keys = HashSet::new();
     encrypt_keys.insert(Keys { method: 0, privkey: ALICE_SECRET_KEY.to_vec(), recipient_pubkey: BOB_PUBLIC_KEY.to_vec()});
 
     print!("Encrypting...\n");
+
     // Encrypt one packet
-    let cipher_rustcrypto = encrypt_with_rustcrypto(PLAINTEXT, &ALICE_SECRET_KEY, &BOB_PUBLIC_KEY)?;
-    let cipher_crypt4gh = &encrypt_with_crypt4gh(PLAINTEXT, &encrypt_keys)?[0];
+    let cipher_rustcrypto = rustcrypto::encrypt_with_rustcrypto(PLAINTEXT, &ALICE_SECRET_KEY, &BOB_PUBLIC_KEY)?;
+    let cipher_crypt4gh = &crypt4gh::encrypt_with_crypt4gh(PLAINTEXT, &encrypt_keys)?[0];
 
     assert_eq!(cipher_rustcrypto, cipher_crypt4gh.clone());
 
-    // Decrypt keypair
+    // Define decrypting keypair
     let decrypt_keys = Keys { method: 0, privkey: BOB_SECRET_KEY.to_vec(), recipient_pubkey: BOB_PUBLIC_KEY.to_vec()};
 
     println!("Decrypting...");
 
     // Decrypt one packet
-    let plaintext_rustcrypto = decrypt_with_rustcrypto(&cipher_rustcrypto, &BOB_SECRET_KEY, &Some(ALICE_PUBLIC_KEY.to_vec())).unwrap();
+    let plaintext_rustcrypto = rustcrypto::decrypt_with_rustcrypto(&cipher_rustcrypto, &BOB_SECRET_KEY, &Some(ALICE_PUBLIC_KEY.to_vec())).unwrap();
     let plaintext_crypt4gh_sodiumoxide = decrypt_with_crypt4gh(vec![cipher_crypt4gh.to_vec()], &[decrypt_keys], &Some(ALICE_PUBLIC_KEY.to_vec()));
 
-    // Return is (decrypted_packets, mut ignored_packets) ... so just get the decrypted_packets payload for a single packet?
+    // Return sematics are (decrypted_packets, mut ignored_packets) ... so just get the decrypted_packets payload for a single packet because the PLAINTEXT is small?
     let comparable_plaintext = plaintext_crypt4gh_sodiumoxide.0[0].clone();
 
     assert_eq!(plaintext_rustcrypto, comparable_plaintext);

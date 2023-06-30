@@ -1,6 +1,6 @@
 pub mod error;
-pub mod decrypt;
-pub mod encrypt;
+pub mod rustcrypto;
+pub mod crypt4gh;
 
 use std::sync::Once;
 
