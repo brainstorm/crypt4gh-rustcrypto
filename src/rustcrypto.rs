@@ -16,6 +16,7 @@ pub fn decrypt_with_rustcrypto(
 ) -> Result<Vec<u8>, Crypt4GHError> {
 	let peer_pubkey = &encrypted_part[4..PublicKey::BYTES+4];
 	log::debug!("   RustCrypto decrypt() peer_pubkey({}): {:02x?}", peer_pubkey.len(), peer_pubkey.iter());
+    log::debug!("   RustCrypto decrypt() sender_pubkey({}): {:02x?}", sender_pubkey.clone().unwrap().as_slice().len(), sender_pubkey.iter());
 
 	if sender_pubkey.is_some() && sender_pubkey.clone().unwrap().as_slice() != peer_pubkey {
 		return Err(Crypt4GHError::InvalidPeerPubPkey);
@@ -32,6 +33,14 @@ pub fn decrypt_with_rustcrypto(
     let shared_key = GenericArray::<u8, U32>::from_slice(&client_session_keys.tx.as_ref().as_slice());
 
     let cipher = ChaCha20Poly1305::new(shared_key);
+
+	log::debug!("    RustCrypto peer pubkey: {:02x?}", peer_pubkey.iter());
+	log::debug!("    RustCrypto nonce: {:02x?}", nonce.iter());
+	log::debug!(
+		"    RustCrypto encrypted data ({}): {:02x?}",
+		packet_data.len(),
+		packet_data.iter()
+	);
 
     let plaintext = cipher.decrypt(nonce, packet_data)
         .map_err(|_| Crypt4GHError::UnableToDecryptBlock)?;
