@@ -28,7 +28,7 @@ pub fn decrypt_with_rustcrypto(
 
     let keypair = Keypair::from(client_sk);
     let client_session_keys = keypair.session_keys_to(&server_pk);
-    let shared_key = GenericArray::<u8, U32>::from_slice(&client_session_keys.rx.as_ref().as_slice());
+    let shared_key = GenericArray::<u8, U32>::from_slice(&client_session_keys.tx.as_ref().as_slice());
 
     let cipher = ChaCha20Poly1305::new(shared_key);
 
@@ -69,7 +69,7 @@ pub fn encrypt_with_rustcrypto(
 
     let keypair = Keypair::from(server_sk);
     let server_session_keys = keypair.session_keys_from(&client_pk);
-    let shared_key = GenericArray::<u8, U32>::from_slice(&server_session_keys.tx.as_ref().as_slice());
+    let shared_key = GenericArray::<u8, U32>::from_slice(&server_session_keys.rx.as_ref().as_slice());
 
     log::debug!("   RustCrypto encrypt() shared key: {:02x?}", shared_key);
 
