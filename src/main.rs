@@ -52,8 +52,8 @@ fn main() -> Result<(), Crypt4GHError> {
     println!("Decrypting...");
 
     // Decrypt one packet
-    let plaintext_rustcrypto = rustcrypto::decrypt_with_rustcrypto(&cipher_rustcrypto, &BOB_SECRET_KEY, &Some(ALICE_PUBLIC_KEY.to_vec())).unwrap();
     let plaintext_crypt4gh_sodiumoxide = decrypt_with_crypt4gh(vec![cipher_crypt4gh.to_vec()], &[decrypt_keys], &Some(ALICE_PUBLIC_KEY.to_vec()));
+    let plaintext_rustcrypto = rustcrypto::decrypt_with_rustcrypto(&cipher_rustcrypto, &BOB_SECRET_KEY, &Some(ALICE_PUBLIC_KEY.to_vec()))?;
 
     // Return sematics are (decrypted_packets, mut ignored_packets)...
     // so just get the decrypted_packets payload for a single packet because the PLAINTEXT is small?

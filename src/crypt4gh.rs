@@ -95,9 +95,10 @@ fn decrypt_x25519_chacha20_poly1305(
 	privkey: &[u8],
 	sender_pubkey: &Option<Vec<u8>>,
 ) -> Result<Vec<u8>, Crypt4GHError> {
-	log::debug!("    my secret key: {:02x?}", &privkey[0..32].iter());
+	log::debug!("   Crypt4GH secret key: {:02x?}", &privkey[0..32].iter());
 
 	let peer_pubkey = &encrypted_part[0..32];
+	log::debug!("   Crypt4GH decrypt() peer_pubkey({}): {:02x?}", peer_pubkey.len(), peer_pubkey.iter());
 
 	if sender_pubkey.is_some() && sender_pubkey.clone().unwrap().as_slice() != peer_pubkey {
 		return Err(Crypt4GHError::InvalidPeerPubPkey);
@@ -106,10 +107,10 @@ fn decrypt_x25519_chacha20_poly1305(
 	let nonce = sodiumoxide::crypto::aead::chacha20poly1305_ietf::Nonce::from_slice(&encrypted_part[32..44]).ok_or(Crypt4GHError::NoNonce)?;
 	let packet_data = &encrypted_part[44..];
 
-	log::debug!("    peer pubkey: {:02x?}", peer_pubkey.iter());
-	log::debug!("    nonce: {:02x?}", nonce.0.iter());
+	log::debug!("    Crypt4GH peer pubkey: {:02x?}", peer_pubkey.iter());
+	log::debug!("    Crypt4GH nonce: {:02x?}", nonce.0.iter());
 	log::debug!(
-		"    encrypted data ({}): {:02x?}",
+		"    Crypt4GH encrypted data ({}): {:02x?}",
 		packet_data.len(),
 		packet_data.iter()
 	);
