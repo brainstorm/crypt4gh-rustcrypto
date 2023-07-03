@@ -14,14 +14,15 @@ pub fn decrypt_with_rustcrypto(
     privkey: &[u8],
     sender_pubkey: &Option<Vec<u8>>,
 ) -> Result<Vec<u8>, Crypt4GHError> {
-	let peer_pubkey = &encrypted_part[0..PublicKey::BYTES];
+	let peer_pubkey = &encrypted_part[4..PublicKey::BYTES+4];
+	log::debug!("   RustCrypto decrypt() peer_pubkey({}): {:02x?}", peer_pubkey.len(), peer_pubkey.iter());
 
 	if sender_pubkey.is_some() && sender_pubkey.clone().unwrap().as_slice() != peer_pubkey {
 		return Err(Crypt4GHError::InvalidPeerPubPkey);
 	}
 
     let nonce = GenericArray::<u8, U12>::from_slice(crate::NONCE);
-    let packet_data = &encrypted_part[44..];
+    let packet_data = &encrypted_part[44+4..];
 
     let client_sk = SecretKey::try_from(&privkey[0..SecretKey::BYTES]).map_err(|_| Crypt4GHError::BadClientPrivateKey)?;
     let server_pk = PublicKey::try_from(peer_pubkey).map_err(|_| Crypt4GHError::BadServerPublicKey)?;
@@ -79,7 +80,7 @@ pub fn encrypt_with_rustcrypto(
         .map_err(|_| Crypt4GHError::UnableToDecryptBlock)?;
 
     Ok(vec![
-        //[0,0,0,0].as_ref(),
+        [0,0,0,0].as_ref(),
         pubkey.as_ref(),
         nonce.as_slice(),
         ciphertext.as_slice()
