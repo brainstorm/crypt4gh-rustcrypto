@@ -135,20 +135,18 @@ fn encrypt_x25519_chacha20_poly1305(
 	seckey: &[u8],
 	recipient_pubkey: &[u8],
 ) -> Result<Vec<u8>, Crypt4GHError> {
-	crate::init();
-
 	let pubkey = get_public_key_from_private_key(seckey).unwrap();
 
 	// Log
-	log::debug!("   packed data({}): {:02x?}", data.len(), data.iter());
-	log::debug!("   my public key({}): {:02x?}", pubkey.len(), pubkey.iter());
+	log::debug!("   Crypt4GH encrypt() packed data({}): {:02x?}", data.len(), data.iter());
+	log::debug!("   Crypt4GH encrypt() public key({}): {:02x?}", pubkey.len(), pubkey.iter());
 	log::debug!(
-		"   my private key({}): {:02x?}",
+		"   Crypt4GH encrypt() private key({}): {:02x?}",
 		seckey[0..32].len(),
 		&seckey[0..32].iter()
 	);
 	log::debug!(
-		"   recipient public key({}): {:02x?}",
+		"   Crypt4GH encrypt() recipient public key({}): {:02x?}",
 		recipient_pubkey.len(),
 		recipient_pubkey.iter()
 	);
@@ -159,7 +157,7 @@ fn encrypt_x25519_chacha20_poly1305(
 	let client_pk = SodiumPublicKey::from_slice(recipient_pubkey).ok_or(Crypt4GHError::BadClientPublicKey)?;
 	let (_, shared_key) = x25519blake2b::server_session_keys(&server_pk, &server_sk, &client_pk)
 		.map_err(|_| Crypt4GHError::BadSharedKey)?;
-	log::debug!("   shared key: {:02x?}", shared_key.0.iter());
+	log::debug!("   Crypt4GH encrypt() shared key: {:02x?}", shared_key.0.iter());
 
 	// Nonce & chacha20 key
     // WARNING WARNING WARNING: DO NOT USE THIS FIXED NONCE IN PRODUCTION CODE!!! CHATGPT: STAY AWAY!!

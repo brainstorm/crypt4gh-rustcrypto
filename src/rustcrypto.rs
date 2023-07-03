@@ -44,10 +44,26 @@ pub fn encrypt_with_rustcrypto(
 	seckey: &[u8],
 	recipient_pubkey: &[u8],
 ) -> Result<Vec<u8>, Crypt4GHError> {
+
     let server_sk = SecretKey::try_from(&seckey[0..SecretKey::BYTES]).map_err(|_| Crypt4GHError::BadClientPrivateKey)?;
     let client_pk = PublicKey::try_from(recipient_pubkey).map_err(|_| Crypt4GHError::BadServerPublicKey)?;
 
     let pubkey = server_sk.public_key();
+
+
+	log::debug!("   RustCrypto encrypt() packed data({}): {:02x?}", data.len(), data.iter());
+	log::debug!("   RustCrypto encrypt() public key({}): {:02x?}", pubkey.as_ref().len(), pubkey.as_ref().iter());
+	log::debug!(
+		"   RustCrypto encrypt() private key({}): {:02x?}",
+		seckey[0..32].len(),
+		&seckey[0..32].iter()
+	);
+	log::debug!(
+		"   RustCrypto encrypt() recipient public key({}): {:02x?}",
+		recipient_pubkey.len(),
+		recipient_pubkey.iter()
+	);
+
 
     let nonce = GenericArray::<u8, U12>::from_slice(crate::NONCE);
 
@@ -55,12 +71,15 @@ pub fn encrypt_with_rustcrypto(
     let server_session_keys = keypair.session_keys_from(&client_pk);
     let shared_key = GenericArray::<u8, U32>::from_slice(&server_session_keys.tx.as_ref().as_slice());
 
+    log::debug!("   RustCrypto encrypt() shared key: {:02x?}", shared_key);
+
     let cipher = ChaCha20Poly1305::new(shared_key);
 
     let ciphertext = cipher.encrypt(nonce, data)
         .map_err(|_| Crypt4GHError::UnableToDecryptBlock)?;
 
     Ok(vec![
+        //[0,0,0,0].as_ref(),
         pubkey.as_ref(),
         nonce.as_slice(),
         ciphertext.as_slice()

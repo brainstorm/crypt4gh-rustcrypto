@@ -3,7 +3,7 @@ use crypt4gh_de_sodiumoxide::crypt4gh::decrypt_with_crypt4gh;
 use hex_literal::hex;
 
 use crypt4gh_de_sodiumoxide::error::Crypt4GHError;
-use crypt4gh_de_sodiumoxide::{Keys, rustcrypto, crypt4gh};
+use crypt4gh_de_sodiumoxide::{Keys, rustcrypto, crypt4gh, libsodium_init};
 
 const PLAINTEXT: &[u8] = &[
     0xbe, 0x07, 0x5f, 0xc5, 0x3c, 0x81, 0xf2, 0xd5, 0xcf, 0x14, 0x13, 0x16, 0xeb, 0xeb, 0x0c, 0x7b,
@@ -31,6 +31,9 @@ const BOB_PUBLIC_KEY: [u8; 32] =
 
 
 fn main() -> Result<(), Crypt4GHError> {
+    pretty_env_logger::init(); // Setup logger
+    libsodium_init(); // Init libsodium
+
     // Define encrypting keypair
     let mut encrypt_keys = HashSet::new();
     encrypt_keys.insert(Keys { method: 0, privkey: ALICE_SECRET_KEY.to_vec(), recipient_pubkey: BOB_PUBLIC_KEY.to_vec()});

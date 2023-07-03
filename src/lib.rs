@@ -13,11 +13,9 @@ use std::sync::Once;
 // TODO: Shrinking to 12 elements to be compatible with Crypt4GH spec?
 pub const NONCE: &[u8; 12] = &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
-pub(crate) static SODIUM_INIT: Once = Once::new();
+pub static SODIUM_INIT: Once = Once::new();
 
-pub(crate) fn init() {
-	pretty_env_logger::init();
-
+pub fn libsodium_init() {
 	SODIUM_INIT.call_once(|| {
 		sodiumoxide::init().expect("Unable to initialize libsodium");
 	});
